@@ -21,4 +21,15 @@ describe('simplifyDebts', () => {
       { from: 'c', to: 'a', amount: 10 },
     ]);
   });
+
+  it('simplifies a four-person debt with a minimum number of settlements', () => {
+    const balances = { a: 30, b: -20, c: -10, d: 0 };
+
+    const settlements = simplifyDebts(balances);
+
+    expect(settlements).toEqual([
+      { from: 'b', to: 'a', amount: 20 },
+      { from: 'c', to: 'a', amount: 10 },
+    ]);
+  });
 });
