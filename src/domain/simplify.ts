@@ -1,26 +1,62 @@
+// src/domain/simplify.ts — simplification des dettes
+//
+// EXERCICE 2 — À COMPLÉTER EN TDD STRICT
+//
+// Spec : voir SUJET.md, exercice 2
+//
+// Le but : transformer un dictionnaire de soldes en LISTE MINIMALE
+// de règlements pour solder le groupe.
+
 import type { Balances, Settlement } from './types';
 
 const roundCents = (value: number): number => Math.round(value * 100) / 100;
 
+function sortCreditors(balances: Array<[string, number]>): Array<[string, number]> {
+  return balances
+    .filter(([, amount]) => amount > 0)
+    .sort((a, b) => b[1] - a[1]);
+}
+
+function sortDebtors(balances: Array<[string, number]>): Array<[string, number]> {
+  return balances
+    .filter(([, amount]) => amount < 0)
+    .sort((a, b) => a[1] - b[1]);
+}
+
 export function simplifyDebts(balances: Balances): Settlement[] {
-  const entries = Object.entries(balances).map(([id, amount]) => [id, roundCents(amount)] as [string, number]);
-  const creditors = entries.filter(([, a]) => a > 0).sort((a, b) => b[1] - a[1]);
-  const debtors = entries.filter(([, a]) => a < 0).sort((a, b) => a[1] - b[1]);
+  const entries = Object.entries(balances).map(([memberId, amount]) => [memberId, roundCents(amount)] as [string, number]);
+  const creditors = sortCreditors(entries);
+  const debtors = sortDebtors(entries);
   const settlements: Settlement[] = [];
 
-  let ci = 0;
-  let di = 0;
+  let creditorIndex = 0;
+  let debtorIndex = 0;
 
-  while (ci < creditors.length && di < debtors.length) {
-    const [cId, cAmt] = creditors[ci];
-    const [dId, dAmt] = debtors[di];
-    const amount = roundCents(Math.min(cAmt, -dAmt));
-    if (amount <= 0) break;
-    settlements.push({ from: dId, to: cId, amount });
-    const nc = roundCents(cAmt - amount);
-    const nd = roundCents(dAmt + amount);
-    if (nc === 0) { ci++; } else { creditors[ci][1] = nc; }
-    if (nd === 0) { di++; } else { debtors[di][1] = nd; }
+  while (creditorIndex < creditors.length && debtorIndex < debtors.length) {
+    const [creditorId, creditorAmount] = creditors[creditorIndex];
+    const [debtorId, debtorAmount] = debtors[debtorIndex];
+
+    const amount = roundCents(Math.min(creditorAmount, -debtorAmount));
+    if (amount <= 0) {
+      break;
+    }
+
+    settlements.push({ from: debtorId, to: creditorId, amount });
+
+    const nextCreditorAmount = roundCents(creditorAmount - amount);
+    const nextDebtorAmount = roundCents(debtorAmount + amount);
+
+    if (nextCreditorAmount === 0) {
+      creditorIndex += 1;
+    } else {
+      creditors[creditorIndex][1] = nextCreditorAmount;
+    }
+
+    if (nextDebtorAmount === 0) {
+      debtorIndex += 1;
+    } else {
+      debtors[debtorIndex][1] = nextDebtorAmount;
+    }
   }
 
   return settlements;
